@@ -25,9 +25,10 @@ export const orderSchemas = {
       .messages({
         'array.min': 'At least one item is required'
       }),
-    placedAt: Joi.date().iso().max('now').required()
+    placedAt: Joi.date().iso().required()
       .messages({
-        'date.max': 'Order date cannot be in the future'
+        'date.base': 'Invalid date format',
+        'any.required': 'Order placement date is required'
       })
   }),
 
@@ -42,33 +43,37 @@ export const orderSchemas = {
 // Validation middleware factory
 export const validate = (schema, source = 'body') => {
   return (req, res, next) => {
-    const dataToValidate = source === 'params' ? req.params : 
-                          source === 'query' ? req.query : 
-                          req.body;
+    try {
+      const dataToValidate = source === 'params' ? req.params : 
+                            source === 'query' ? req.query : 
+                            req.body;
 
-    const { error, value } = schema.validate(dataToValidate, {
-      abortEarly: false,
-      stripUnknown: true
-    });
+      const { error, value } = schema.validate(dataToValidate, {
+        abortEarly: false,
+        stripUnknown: true
+      });
 
-    if (error) {
-      const errors = error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message
-      }));
-      
-      throw new ValidationError('Validation failed', errors);
+      if (error) {
+        const errors = error.details.map(detail => ({
+          field: detail.path.join('.'),
+          message: detail.message
+        }));
+        
+        return next(new ValidationError('Validation failed', errors));
+      }
+
+      // Replace request data with validated data
+      if (source === 'params') {
+        req.params = value;
+      } else if (source === 'query') {
+        req.query = value;
+      } else {
+        req.body = value;
+      }
+
+      next();
+    } catch (err) {
+      next(err);
     }
-
-    // Replace request data with validated data
-    if (source === 'params') {
-      req.params = value;
-    } else if (source === 'query') {
-      req.query = value;
-    } else {
-      req.body = value;
-    }
-
-    next();
   };
 };

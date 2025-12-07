@@ -1,11 +1,16 @@
 import mongoose from "mongoose";
 
 const customerSchema = new mongoose.Schema({
-  _id: String,
-  name: String,
-  location: { lat: Number, lng: Number },
-  zone: String,
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  location: { 
+    lat: { type: Number, required: true },
+    lon: { type: Number, required: true }
+  },
+  zone: { type: String, required: true },
   firstOrderCompleted: { type: Boolean, default: false }
+}, {
+  timestamps: true
 });
 
 export default mongoose.model("Customer", customerSchema);
